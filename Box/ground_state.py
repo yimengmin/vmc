@@ -1,27 +1,17 @@
 import torch
 import numpy as np
 import torch.nn as nn
-STEPS = 200000
+STEPS = 20000
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-interv = 500 # plot the ebery every 50 steps
-K =500# para term,center around x==0.5
+interv = 500 # plot the energy every 50 steps
+K =500 # para term,center around x==0.5
 para_pot = lambda p_x: K*p_x**2
-#qnn = lambda pos:(0.5-pos)*(0.5+pos)*(pos-0.25)*(pos+0.25)
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--level', default=1, type=int, help='Energy Level')
 opt = parser.parse_args()
 e_level = opt.level
-#qnn = lambda pos:100*(-0.5+pos)*(0.5+pos)*(pos-0.25)*(pos+0.25)*(pos-0.125)*(pos+0.125)
-if e_level==2:
-    qnn = lambda pos:(pos+1)*(pos)*(pos-1)
-elif e_level==1:
-    qnn = lambda pos:(pos-1.)*(pos+1.)
-elif e_level==3:
-     qnn = lambda pos:(pos-1.)*(pos+1.)*(pos-1./np.sqrt(2))*(pos+1./np.sqrt(2))
-else:
-    print('Please input an energy level between 1 and 8!')
 class TwoLayerNet(torch.nn.Module):
   def __init__(self, D_in, H1,H2,H3,H4, D_out):
     """
@@ -93,11 +83,10 @@ for t in range(STEPS):
   y_der0 = model(x).reshape(-1)
   ### normalize
   ampli = torch.sum(torch.mul(y_der0,y_der0)).float()
-  y_der0 = y_der0/torch.sqrt(ampli)
+  y_der0 = y_der0/torch.sqrt(ampli) #Normalize wavefunction
   y_der1= (y_der0[1:N]-y_der0[0:N-1])*N
   y_der2 = (y_der1[1:N-1]-y_der1[0:N-2])*N
   y_der2.reshape(-1)
-
   # Compute and print loss
   parabola_pot = torch.sum(torch.mul(para_pot(x).reshape(-1),torch.mul(y_der0,y_der0))).float()*1.0/N
   loss = -1.0/N *torch.sum(torch.mul(y_der2,y_der0[0:N-2])).float() + parabola_pot
@@ -109,7 +98,6 @@ for t in range(STEPS):
   optimizer.zero_grad()
   loss.backward()
   optimizer.step()
-
 nn_value = y_der0.cpu().detach().numpy()
 loss_val = loss.cpu().detach().numpy()
 from matplotlib import pyplot as plt
@@ -119,11 +107,10 @@ plt.plot(sampling_value,nn_value, 'r', label='Neural Network Solution: Energy : 
 #gt_solution = gt_solution/np.sqrt(sum(gt_solution**2))
 #plt.plot(sampling_value,gt_solution, 'g', label='Ground Truth Solution')
 plt.legend(loc='best')
-plt.savefig('01State_%d.png'%e_level)
+plt.savefig('Ground_State.png')
 plt.clf()
 plt.plot(np.arange(0,int(STEPS/interv),1),loss_his,label='Training Loss')
 plt.legend(loc='best')
 plt.xlabel('Steps per %d' %interv)
 plt.ylabel('Energy')
-plt.savefig('01loss_%d.png'%e_level)
-np.savetxt('para_state_0.txt',nn_value)
+np.savetxt('Ground_State.txt',nn_value)
