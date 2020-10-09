@@ -99,8 +99,8 @@ for t in range(STEPS):
   # Compute and print loss
   # para_pot is the potential function
   parabola_pot = torch.sum(torch.mul(para_pot(x).reshape(-1),torch.mul(y_der0,y_der0))).float()
-  loss = -0.5*torch.sum(torch.mul(y_der2,y_der0[0:N-2])).float() + parabola_pot # add  p^2
-  loss = loss* 2*Scale/N # use sum to replace the inte
+  energy = -0.5*torch.sum(torch.mul(y_der2,y_der0[0:N-2])).float() + parabola_pot # add  p^2
+  loss = energy * 2*Scale/N # use sum to replace the inte
   loss = loss + opt.decay*orth_pen # add the penality term
   #loss = loss_fn(y_pred, y)
   if (t%interv==0):
@@ -114,7 +114,7 @@ nn_value = y_der0.cpu().detach().numpy()
 loss_val = loss.cpu().detach().numpy()
 from matplotlib import pyplot as plt
 plt.figure()
-plt.plot(sampling_value,nn_value, 'r', label='Neural Network Solution: Energy : %.5f'%loss_val)
+plt.plot(sampling_value,nn_value, 'r', label='Energy : %.5f'%energy)
 plt.legend(loc='best')
 plt.savefig('Excited_State_1.png')
 plt.clf()

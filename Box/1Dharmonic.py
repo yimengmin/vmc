@@ -100,7 +100,7 @@ nn_value = y_der0.cpu().detach().numpy()
 loss_val = loss.cpu().detach().numpy()
 from matplotlib import pyplot as plt
 plt.figure()
-plt.plot(sampling_value,nn_value, 'r', label='Neural Network Solution: Energy : %.5f'%loss_val)
+plt.plot(sampling_value,nn_value, 'r', label='Energy : %.5f'%loss_val)
 #gt_solution = np.sin(sampling_value*np.pi*e_level)
 #gt_solution = gt_solution/np.sqrt(sum(gt_solution**2))
 #plt.plot(sampling_value,gt_solution, 'g', label='Ground Truth Solution')
