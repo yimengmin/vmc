@@ -1,28 +1,29 @@
 import torch
 import numpy as np
 import torch.nn as nn
-STEPS = 200000
+Scale = 10.0
+N, D_in, H1,H2,H3,H4, D_out = 45360,1,16,8,8,16,1
+STEPS = 30000
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-interv = 500 # plot the ebery every 50 steps
-K =500# para term,center around x==0.5
-para_pot = lambda p_x: K*p_x**2
-#qnn = lambda pos:(0.5-pos)*(0.5+pos)*(pos-0.25)*(pos+0.25)
+interv = 500 # plot the energy every 50 steps
+K = 1 # para term,center around x==0.5
+'''
+assume m = hbar = k = 1
+'''
+para_pot = lambda p_x: 0.5*K*p_x**2 
+qnn = lambda pos:(pos-Scale)*(Scale+pos)
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--level', default=1, type=int, help='Energy Level')
-parser.add_argument('--decay', default=1.0, type=float, help='Orth Pene')
+parser.add_argument('--level', default=2, type=int, help='Energy Level')
+parser.add_argument('--decay', default=30, type=float, help='Orth Pene')
 opt = parser.parse_args()
-e_level = opt.level
-#qnn = lambda pos:100*(-0.5+pos)*(0.5+pos)*(pos-0.25)*(pos+0.25)*(pos-0.125)*(pos+0.125)
-if e_level==2:
-    qnn = lambda pos:(pos+1)*(pos)*(pos-1)
-elif e_level==1:
-    qnn = lambda pos:(pos-1.)*(pos+1.)
-elif e_level==3:
-     qnn = lambda pos:(pos-1.)*(pos+1.)*(pos-1./np.sqrt(2))*(pos+1./np.sqrt(2))
-else:
-    print('Please input an energy level between 1 and 8!')
+
+#load ground state
+gs0 = np.loadtxt('Ground_State.txt')
+gs0 = torch.from_numpy(gs0).float().to(device)
+for indx in range(1,opt.level):
+    previous_states = 'excited_state_'+str(indx) 
+    globals()[previous_states] = torch.from_numpy(np.loadtxt('Excited_State_%d.txt'%indx)).float().to(device)
 class TwoLayerNet(torch.nn.Module):
   def __init__(self, D_in, H1,H2,H3,H4, D_out):
     """
@@ -48,16 +49,14 @@ class TwoLayerNet(torch.nn.Module):
     h4 = torch.nn.Tanh()(self.linear4(h3))
     y_pred = self.linear5(h4)
     return y_pred
-
 # N is batch size in our case, N replace the sampling density on 1D condition; D_in is input dimension;
 # H is hidden dimension; D_out is output dimension.
-N, D_in, H1,H2,H3,H4, D_out =45360,1,16,8,8,16,1
 # Create random Tensors to hold inputs and outputs
-sampling_value = np.linspace(-3.,3.,N)
+sampling_value = np.linspace(-1*Scale,Scale,N)
 #x = torch.randn(N, D_in) # N by 1 
 input_x = sampling_value.reshape(-1,1)
 x = torch.from_numpy(input_x).float().to(device) # change double to float
-print(x.shape)
+print(x.shape) # x represents the x coordinate
 #y = torch.randn(N, D_out) # N by 1
 
 #print(y.shape)
@@ -71,12 +70,6 @@ def init_weights(m):
         m.bias.data.fill_(0.01)
 
 model.apply(init_weights)
-
-
-gs0 = np.loadtxt('para_state_0.txt')
-gs0 = torch.from_numpy(gs0).float().to(device)
-gs1 = np.loadtxt('para_state_s1.txt')
-gs1 = torch.from_numpy(gs1).float().to(device)
 #y_der0 = model(x)
 #y_der1= y_der0[1:N,:]-y_der0[0:N-1,:] 
 #y_der2 = y_der1[1:N-1,:]-y_der0[0:N-2,:]
@@ -85,55 +78,54 @@ gs1 = torch.from_numpy(gs1).float().to(device)
 # in the SGD constructor will contain the learnable parameters of the two
 # nn.Linear modules which are members of the model.
 #loss_fn = torch.nn.MSELoss(reduction='sum')
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+optimizer = torch.optim.Adam(model.parameters(), lr=5e-3)
 loss_his = []
 for t in range(STEPS):
-  # Forward pass: Compute predicted y by passing x to the model
-  #y_pred = model(x)
-  ## apply element wise product
-  # new psi, comparing to the zero energy position, we add a noise term except the bouday twp points
-  # 0.2 is the scale
-  #psi = torch.mul(qnn(x),0.0001*torch.from_numpy(np.vstack(([0.],np.random.rand(N-2,1),[0.]))).float()) 
-#  psi = qnn(x)
-  
-  #y_der0 = torch.mul(psi.reshape(-1),model(x).reshape(-1))
+#  psi = qnn(x) #pbc
+#  y_der0 = torch.mul(psi.reshape(-1),model(x).reshape(-1))
   y_der0 = model(x).reshape(-1)
   ### normalize
-  ampli = torch.sum(torch.mul(y_der0,y_der0)).float()
-  y_der0 = y_der0/torch.sqrt(ampli)
-  y_der1= (y_der0[1:N]-y_der0[0:N-1])*N
-  y_der2 = (y_der1[1:N-1]-y_der1[0:N-2])*N
+  ampli = torch.sum(torch.mul(y_der0,y_der0)).float() * (2*Scale)/N
+  y_der0 = y_der0/torch.sqrt(ampli) #Normalize wavefunction
+  y_der1= (y_der0[1:N]-y_der0[0:N-1])*N/(2*Scale) 
+  y_der2 = (y_der1[1:N-1]-y_der1[0:N-2])*N/(2*Scale)
   y_der2.reshape(-1)
-  orth_pen = torch.abs(torch.sum(torch.mul(gs0,y_der0)))
-  orth_pen = torch.abs(torch.sum(torch.mul(gs1,y_der0))) + orth_pen
+
+
+
+  #===================compute penality term of based on previous states============
+  orth_pen = torch.abs(torch.sum(torch.mul(gs0,y_der0)))*(2*Scale)/N
+  # load previous states
+  for indx in range(1,opt.level):
+      gs_previous = globals()['excited_state_'+str(indx)]
+      orth_pen = orth_pen+torch.abs(torch.sum(torch.mul(gs_previous,y_der0)))*(2*Scale)/N
+  #  * (2*Scale)/N  normalize them here
+  #========================================
 
   # Compute and print loss
-  parabola_pot = torch.sum(torch.mul(para_pot(x).reshape(-1),torch.mul(y_der0,y_der0))).float()*1.0/N
-  energy = -1.0/N *torch.sum(torch.mul(y_der2,y_der0[0:N-2])).float() + parabola_pot
-  loss = energy+opt.decay*orth_pen
+  # para_pot is the potential function
+  parabola_pot = torch.sum(torch.mul(para_pot(x).reshape(-1),torch.mul(y_der0,y_der0))).float()
+  loss = -0.5*torch.sum(torch.mul(y_der2,y_der0[0:N-2])).float() + parabola_pot # add  p^2
+  loss = loss* 2*Scale/N # use sum to replace the inte
+  loss = loss + opt.decay*orth_pen # add the penality term
   #loss = loss_fn(y_pred, y)
   if (t%interv==0):
-      print(t, energy.item(),loss.item())
+      print(t, loss.item(),loss.item())
       loss_his.append(loss.item())
   # Zero gradients, perform a backward pass, and update the weights.
   optimizer.zero_grad()
   loss.backward()
   optimizer.step()
-
 nn_value = y_der0.cpu().detach().numpy()
-final_enegy = energy.cpu().detach().numpy()
+loss_val = loss.cpu().detach().numpy()
 from matplotlib import pyplot as plt
 plt.figure()
-plt.plot(sampling_value,nn_value, 'r', label='Neural Network Solution: Energy%.5f'%final_enegy)
-#gt_solution = np.sin(sampling_value*np.pi*e_level)
-#gt_solution = gt_solution/np.sqrt(sum(gt_solution**2))
-#plt.plot(sampling_value,gt_solution, 'g', label='Ground Truth Solution')
+plt.plot(sampling_value,nn_value, 'r', label='Neural Network Solution: Energy : %.5f'%loss_val)
 plt.legend(loc='best')
-plt.savefig('01State_%d_s2.png'%e_level)
+plt.savefig('Excited_State_%d.png'%(opt.level))
 plt.clf()
-plt.plot(np.arange(0,int(STEPS/interv),1),loss_his,label='Training Loss')
-plt.legend(loc='best')
-plt.xlabel('Steps per %d' %interv)
-plt.ylabel('Energy')
-plt.savefig('01loss_%d_s2.png'%e_level)
-np.savetxt('para_state_s2.txt',nn_value)
+#plt.plot(np.arange(0,int(STEPS/interv),1),loss_his,label='Training Loss')
+#plt.legend(loc='best')
+#plt.xlabel('Steps per %d' %interv)
+#plt.ylabel('Energy')
+np.savetxt('Excited_State_%d.txt'%(opt.level),nn_value)
