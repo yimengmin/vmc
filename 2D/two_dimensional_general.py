@@ -103,7 +103,7 @@ def init_weights(m):
         m.bias.data.fill_(0.01)
 
 model.apply(init_weights)
-optimizer = torch.optim.Adagrad(model.parameters(), lr=1e-2)
+optimizer = torch.optim.Adagrad(model.parameters(), lr=1e-3)
 loss_his = []
 for t in range(STEPS):
   y_der0 = model(input_pos)
