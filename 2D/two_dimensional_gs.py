@@ -1,5 +1,5 @@
 import torch
-Scale = 20.0
+Scale = 12.0
 DIM = 500 # the grid
 unit_area = (2*Scale)**2/((DIM-1)**2)
 import torch.nn as nn
@@ -71,7 +71,7 @@ input_pos = pos_matrix
 potential_matrix = np.zeros((DIM**2,1))
 for i in range(DIM):
   for j in range(DIM):
-      potential_matrix[i*DIM+j] =0.5*((i*inv-6.)**2+(j*inv-6.)**2)
+      potential_matrix[i*DIM+j] =0.5*((i*inv-Scale)**2+(j*inv-Scale)**2)
 potential_matrix = torch.from_numpy(potential_matrix).float().to(device)
 
 input_pos = torch.from_numpy(input_pos).float().to(device)
