@@ -146,7 +146,7 @@ origin = 'lower'
 fig = plt.figure()
 ax = fig.add_subplot(111)
 
-im0 = ax.contourf(x, y, psi_matrix,cmap='viridis', origin=origin)
+im0 = ax.contourf(x, y, psi_matrix,levels= list(np.arange(-0.4,0.4,0.05)),cmap='viridis', origin=origin)
 fig.colorbar(im0, ax=ax)
 ax.set_aspect('1.0')
 #plt.set_title('Energy:%.5f'%energy.cpu().detach().numpy()) # plt.set_title is used for 3D while plt.title is for 2D
