@@ -1,5 +1,5 @@
 import torch
-Scale = 6.0
+Scale = 20.0
 DIM = 500 # the grid
 unit_area = (2*Scale)**2/((DIM-1)**2)
 import torch.nn as nn
