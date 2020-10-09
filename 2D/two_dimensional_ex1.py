@@ -134,20 +134,26 @@ for i in range(DIM):
 
 import matplotlib
 matplotlib.use('Agg') # for saving the figure
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 from matplotlib import cm
 
-plt.figure()
+#plt.figure()
 x = np.outer(np.linspace(-1*Scale, Scale, DIM), np.ones(DIM))
 y = x.copy().T # transpose
-plt = plt.axes(projection='3d')
-plt.plot_surface(x,y, psi_matrix,cmap='viridis', edgecolor='none')
+#plt = plt.axes(projection='3d')
+#plt.plot_surface(x,y, psi_matrix,cmap='viridis', edgecolor='none')
+origin = 'lower'
+fig = plt.figure()
+ax = fig.add_subplot(111)
 
-cset = plt.contourf(x, y, psi_matrix, zdir='z', offset=-1.5, cmap=cm.coolwarm)
-
-plt.set_title('Energy:%.5f'%energy.cpu().detach().numpy())
-plt.set_ylim(-1*Scale, Scale)
-plt.set_xlim(-1*Scale,Scale)
-plt.set_zlim(-1.5, 0.6)
-plt.figure.savefig('Excited_State_1.png')
+im0 = ax.contourf(x, y, psi_matrix,cmap='viridis', origin=origin)
+fig.colorbar(im0, ax=ax)
+ax.set_aspect('1.0')
+#plt.set_title('Energy:%.5f'%energy.cpu().detach().numpy()) # plt.set_title is used for 3D while plt.title is for 2D
+plt.title('Energy:%.5f'%energy.cpu().detach().numpy())
+#plt.set_ylim(-1*Scale, Scale)
+#plt.set_xlim(-1*Scale,Scale)
+#plt.set_zlim(-1.5, 0.6)
+#plt.figure.savefig('Excited_State_1.png') # for 3D
+plt.savefig('Excited_State_1.png') # for 2D
 np.savetxt('Excited_State_1.txt',nn_value)
