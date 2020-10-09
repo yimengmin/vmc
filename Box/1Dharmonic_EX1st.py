@@ -15,7 +15,7 @@ qnn = lambda pos:(pos-Scale)*(Scale+pos)
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--level', default=1, type=int, help='Energy Level')
-parser.add_argument('--decay', default=1.0, type=float, help='Orth Pene')
+parser.add_argument('--decay', default=10, type=float, help='Orth Pene')
 opt = parser.parse_args()
 
 #load ground state
