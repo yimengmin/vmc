@@ -115,9 +115,9 @@ for t in range(STEPS):
   #  * (2*Scale)/N  normalize them here
   #========================================
 
-  loss = torch.sum(torch.mul(laplacian,y_der0)).float() *unit_area # int->sum
-  loss = loss + potential_energy 
-  loss = opt.decay*orth_pen + loss
+  energy = torch.sum(torch.mul(laplacian,y_der0)).float() *unit_area # int->sum
+  energy = energy + potential_energy 
+  loss = opt.decay*orth_pen + energy
   if (t%interv==0):
       print(t,loss.item())
       loss_his.append(loss.item())
@@ -140,6 +140,6 @@ x = np.outer(np.linspace(-1*Scale, Scale, DIM), np.ones(DIM))
 y = x.copy().T # transpose
 plt = plt.axes(projection='3d')
 plt.plot_surface(x,y, psi_matrix,cmap='viridis', edgecolor='none')
-plt.set_title('Energy:%.5f'%loss.cpu().detach().numpy())
+plt.set_title('Energy:%.5f'%energy.cpu().detach().numpy())
 plt.figure.savefig('Excited_State_1.png')
 np.savetxt('Excited_State_1.txt',nn_value)
