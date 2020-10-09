@@ -1,9 +1,9 @@
 import torch
 import numpy as np
 import torch.nn as nn
-Scale = 10.0
+Scale = 20.0
 N, D_in, H1,H2,H3,H4, D_out = 45360,1,16,8,8,16,1
-STEPS = 30000
+STEPS = 100000
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 interv = 500 # plot the energy every 50 steps
 K = 1 # para term,center around x==0.5
