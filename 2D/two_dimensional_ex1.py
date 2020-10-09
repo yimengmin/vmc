@@ -10,7 +10,7 @@ parser.add_argument('--level', default=1, type=int, help='Energy Level')
 parser.add_argument('--decay', default=30, type=float, help='Orth Pene')
 opt = parser.parse_args()
 
-STEPS = 20000
+STEPS = 200
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 interv = 5 # plot the ebery every 50 steps
 import numpy as np 
@@ -135,11 +135,19 @@ for i in range(DIM):
 import matplotlib
 matplotlib.use('Agg') # for saving the figure
 from matplotlib import pyplot as plt
+from matplotlib import cm
+
 plt.figure()
 x = np.outer(np.linspace(-1*Scale, Scale, DIM), np.ones(DIM))
 y = x.copy().T # transpose
 plt = plt.axes(projection='3d')
 plt.plot_surface(x,y, psi_matrix,cmap='viridis', edgecolor='none')
+
+cset = plt.contourf(x, y, psi_matrix, zdir='z', offset=-0.6, cmap=cm.coolwarm)
+
 plt.set_title('Energy:%.5f'%energy.cpu().detach().numpy())
+plt.set_ylim(-1*Scale, Scale)
+plt.set_xlim(-1*Scale,Scale)
+plt.set_zlim(-0.6, 0.6)
 plt.figure.savefig('Excited_State_1.png')
 np.savetxt('Excited_State_1.txt',nn_value)
