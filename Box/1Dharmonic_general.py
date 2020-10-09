@@ -106,8 +106,8 @@ for t in range(STEPS):
   # para_pot is the potential function
   parabola_pot = torch.sum(torch.mul(para_pot(x).reshape(-1),torch.mul(y_der0,y_der0))).float()
   energy = -0.5*torch.sum(torch.mul(y_der2,y_der0[0:N-2])).float() + parabola_pot # add  p^2
-  loss = energy * 2*Scale/N # use sum to replace the inte
-  loss = loss + opt.decay*orth_pen # add the penality term
+  energy = energy * 2*Scale/N # use sum to replace the inte
+  loss = energy + opt.decay*orth_pen # add the penality term
   #loss = loss_fn(y_pred, y)
   if (t%interv==0):
       print(t, loss.item(),loss.item())
