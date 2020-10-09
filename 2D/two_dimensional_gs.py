@@ -89,7 +89,6 @@ def init_weights(m):
 model.apply(init_weights)
 optimizer = torch.optim.Adagrad(model.parameters(), lr=1e-2)
 loss_his = []
-
 for t in range(STEPS):
   y_der0 = model(input_pos)
   ampli = torch.sum(torch.mul(y_der0,y_der0)).float()*unit_area  # int->sum
