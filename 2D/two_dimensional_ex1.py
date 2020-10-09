@@ -143,11 +143,11 @@ y = x.copy().T # transpose
 plt = plt.axes(projection='3d')
 plt.plot_surface(x,y, psi_matrix,cmap='viridis', edgecolor='none')
 
-cset = plt.contourf(x, y, psi_matrix, zdir='z', offset=-0.6, cmap=cm.coolwarm)
+cset = plt.contourf(x, y, psi_matrix, zdir='z', offset=-1.5, cmap=cm.coolwarm)
 
 plt.set_title('Energy:%.5f'%energy.cpu().detach().numpy())
 plt.set_ylim(-1*Scale, Scale)
 plt.set_xlim(-1*Scale,Scale)
-plt.set_zlim(-0.6, 0.6)
+plt.set_zlim(-1.5, 0.6)
 plt.figure.savefig('Excited_State_1.png')
 np.savetxt('Excited_State_1.txt',nn_value)
