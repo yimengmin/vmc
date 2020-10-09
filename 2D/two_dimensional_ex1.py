@@ -10,7 +10,7 @@ parser.add_argument('--level', default=1, type=int, help='Energy Level')
 parser.add_argument('--decay', default=30, type=float, help='Orth Pene')
 opt = parser.parse_args()
 
-STEPS = 200
+STEPS = 20000
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 interv = 5 # plot the ebery every 50 steps
 import numpy as np 
