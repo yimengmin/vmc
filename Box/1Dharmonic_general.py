@@ -15,7 +15,7 @@ qnn = lambda pos:(pos-Scale)*(Scale+pos)
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--level', default=2, type=int, help='Energy Level')
-parser.add_argument('--decay', default=30, type=float, help='Orth Pene')
+parser.add_argument('--decay', default=20, type=float, help='Orth Pene')
 opt = parser.parse_args()
 
 #load ground state
@@ -78,7 +78,7 @@ model.apply(init_weights)
 # in the SGD constructor will contain the learnable parameters of the two
 # nn.Linear modules which are members of the model.
 #loss_fn = torch.nn.MSELoss(reduction='sum')
-optimizer = torch.optim.Adam(model.parameters(), lr=5e-3)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 loss_his = []
 for t in range(STEPS):
 #  psi = qnn(x) #pbc
