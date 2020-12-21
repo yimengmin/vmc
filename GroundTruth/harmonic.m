@@ -13,8 +13,9 @@ PE =  kron(P,I) + kron(I,P);
 H =  H*100 + 0.5 * PE;
 
 % return 3 smallest eigrn
-% d = eigs(H,6,'smallestabs')
+d = eigs(H,10,'smallestabs')
 [PSI,D] = eigs(H,10,'SM');
+
 AMP = reshape(PSI(:,10).^2,[100,100]);
 % 1,2,3,4,5... corresponds to ground state, 1st excited....
 [X,Y] = meshgrid(V,V);
