@@ -1,18 +1,18 @@
 import torch
 Scale = 6.0
-DIM = 500 # the grid
+DIM = 600 # the grid
 unit_area = (2*Scale)**2/((DIM-1)**2)
 import torch.nn as nn
 
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--level', default=1, type=int, help='Energy Level')
-parser.add_argument('--decay', default=30, type=float, help='Orth Pene')
+parser.add_argument('--decay', default=100, type=float, help='Orth Pene')
 opt = parser.parse_args()
 
-STEPS = 20000
+STEPS = 100000
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-interv = 5 # plot the ebery every 50 steps
+interv = 500 # plot the ebery every 50 steps
 import numpy as np 
 import scipy.io as sio
 mat_contents = sio.loadmat('Energy_operator.mat')
@@ -77,14 +77,14 @@ inv = 2*Scale/(DIM-1)
 pos_matrix = np.zeros((DIM**2,2))  # the 2D position array 
 for i in range(DIM):
   for j in range(DIM):
-      pos_matrix[i*DIM+j] = (i*inv-6.,j*inv-6.)
+      pos_matrix[i*DIM+j] = (i*inv-Scale,j*inv-Scale)
 input_pos = pos_matrix
 
 # construct the square term correponds to the potential energy
 potential_matrix = np.zeros((DIM**2,1))
 for i in range(DIM):
   for j in range(DIM):
-      potential_matrix[i*DIM+j] =0.5*((i*inv-6.)**2+(j*inv-6.)**2)
+      potential_matrix[i*DIM+j] =0.5*((i*inv-Scale)**2+(j*inv-Scale)**2)
 potential_matrix = torch.from_numpy(potential_matrix).float().to(device)
 
 input_pos = torch.from_numpy(input_pos).float().to(device)
@@ -111,7 +111,9 @@ for t in range(STEPS):
   potential_energy = torch.sum(torch.mul(y_der0,torch.mul(y_der0,potential_matrix))).float()*unit_area
 
   #===================compute penality term of based on previous states============
-  orth_pen = torch.abs(torch.matmul(torch.t(gs0),y_der0))*unit_area
+#  orth_pen = torch.abs(torch.matmul(torch.t(gs0),y_der0))*unit_area
+  orth_pen = torch.abs(torch.matmul(gs0,y_der0))*unit_area
+
   #  * (2*Scale)/N  normalize them here
   #========================================
 

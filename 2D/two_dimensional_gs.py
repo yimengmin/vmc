@@ -1,11 +1,11 @@
 import torch
-Scale = 12.0
-DIM = 500 # the grid
+Scale = 6.0
+DIM = 600 # the grid
 unit_area = (2*Scale)**2/((DIM-1)**2)
 import torch.nn as nn
-STEPS = 20000
+STEPS = 50000
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-interv = 5 # plot the ebery every 50 steps
+interv = 500 # plot the ebery every 50 steps
 import numpy as np 
 import scipy.io as sio
 mat_contents = sio.loadmat('Energy_operator.mat')
@@ -64,7 +64,7 @@ inv = 2*Scale/(DIM-1)
 pos_matrix = np.zeros((DIM**2,2))  # the 2D position array 
 for i in range(DIM):
   for j in range(DIM):
-      pos_matrix[i*DIM+j] = (i*inv-6.,j*inv-6.)
+      pos_matrix[i*DIM+j] = (i*inv-Scale,j*inv-Scale)
 input_pos = pos_matrix
 
 # construct the square term correponds to the potential energy
@@ -107,6 +107,10 @@ for t in range(STEPS):
   loss.backward()
   optimizer.step()
 
+
+PATH_tobs = 'Models/ground_state.pth'
+torch.save(model.state_dict(),PATH_tobs)
+
 nn_value = y_der0.cpu().detach().numpy()
 psi_matrix = np.zeros((DIM,DIM))
 for i in range(DIM):
@@ -119,8 +123,8 @@ from matplotlib import pyplot as plt
 plt.figure()
 x = np.outer(np.linspace(-1*Scale, Scale, DIM), np.ones(DIM))
 y = x.copy().T # transpose
-plt = plt.axes(projection='3d')
-plt.plot_surface(x,y, psi_matrix,cmap='viridis', edgecolor='none')
-plt.set_title('Energy:%.5f'%loss.cpu().detach().numpy())
-plt.figure.savefig('Ground_State.png')
+#plt = plt.axes(projection='3d')
+#plt.plot_surface(x,y, psi_matrix,cmap='viridis', edgecolor='none')
+#plt.set_title('Energy:%.5f'%loss.cpu().detach().numpy())
+#plt.figure.savefig('Ground_State.png')
 np.savetxt('Ground_State.txt',nn_value)

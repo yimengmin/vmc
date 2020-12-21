@@ -1,18 +1,20 @@
 import torch
+import torch.optim as optim
+from torch.optim.lr_scheduler import StepLR
 Scale = 6.0
-DIM = 500 # the grid
+DIM = 600 # the grid
 unit_area = (2*Scale)**2/((DIM-1)**2)
 import torch.nn as nn
 
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--level', default=2, type=int, help='Energy Level')
-parser.add_argument('--decay', default=30, type=float, help='Orth Pene')
+parser.add_argument('--decay', default=100, type=float, help='Orth Pene')
 opt = parser.parse_args()
 
 STEPS = 100000
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-interv = 5 # plot the ebery every 50 steps
+interv = 500 # plot the ebery every 50 steps
 import numpy as np 
 import scipy.io as sio
 mat_contents = sio.loadmat('Energy_operator.mat')
@@ -80,14 +82,14 @@ inv = 2*Scale/(DIM-1)
 pos_matrix = np.zeros((DIM**2,2))  # the 2D position array 
 for i in range(DIM):
   for j in range(DIM):
-      pos_matrix[i*DIM+j] = (i*inv-6.,j*inv-6.)
+      pos_matrix[i*DIM+j] = (i*inv-Scale,j*inv-Scale)
 input_pos = pos_matrix
 
 # construct the square term correponds to the potential energy
 potential_matrix = np.zeros((DIM**2,1))
 for i in range(DIM):
   for j in range(DIM):
-      potential_matrix[i*DIM+j] =0.5*((i*inv-6.)**2+(j*inv-6.)**2)
+      potential_matrix[i*DIM+j] =0.5*((i*inv-Scale)**2+(j*inv-Scale)**2)
 potential_matrix = torch.from_numpy(potential_matrix).float().to(device)
 
 input_pos = torch.from_numpy(input_pos).float().to(device)
@@ -104,13 +106,14 @@ def init_weights(m):
 
 model.apply(init_weights)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
+scheduler = StepLR(optimizer, step_size=5000, gamma=0.9)
 loss_his = []
 for t in range(STEPS):
   y_der0 = model(input_pos)
   ampli = torch.sum(torch.mul(y_der0,y_der0)).float()*unit_area  # int->sum
   y_der0 = y_der0/torch.sqrt(ampli)
   laplacian = torch.spmm(H_matrix,y_der0)/unit_area  # (DIM^2 \times 1)
-  
+    
   potential_energy = torch.sum(torch.mul(y_der0,torch.mul(y_der0,potential_matrix))).float()*unit_area
 
   #===================compute penality term of based on previous states============
@@ -125,12 +128,13 @@ for t in range(STEPS):
   energy = energy + potential_energy 
   loss = opt.decay*orth_pen + energy
   if (t%interv==0):
-      print(t,loss.item())
+      print('Time: %d, Loss Value: %.5f'%(t,loss.item()))
       loss_his.append(loss.item())
   # Zero gradients, perform a backward pass, and update the weights.
   optimizer.zero_grad()
   loss.backward()
   optimizer.step()
+  scheduler.step()
 
 nn_value = y_der0.cpu().detach().numpy()
 psi_matrix = np.zeros((DIM,DIM))
