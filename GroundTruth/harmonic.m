@@ -14,7 +14,7 @@ P = diag(V.^2);
 PE =  kron(P,I) + kron(I,P);
 H =  H *100 + 0.5 * PE ;
 
-% return 3 smallest eigrn
+% return 10 smallest eigrn
 d = eigs(H,10,'smallestabs')
 [PSI,D] = eigs(H,10,'SM');
 
