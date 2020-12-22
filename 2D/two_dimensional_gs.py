@@ -125,7 +125,7 @@ x = np.outer(np.linspace(-1*Scale, Scale, DIM), np.ones(DIM))
 y = x.copy().T # transpose
 plt = plt.axes(projection='3d')
 plt.plot_surface(x,y, psi_matrix,cmap='viridis', edgecolor='none')
-plt.set_title('Energy:%.5f'%energy.cpu().detach().numpy())
+plt.set_title('Energy:%.5f'%loss.cpu().detach().numpy())
 plt.figure.savefig('Ground_State.png')
 np.savetxt('Ground_State.txt',nn_value)
 
