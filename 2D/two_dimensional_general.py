@@ -106,7 +106,6 @@ def init_weights(m):
 
 model.apply(init_weights)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
-scheduler = StepLR(optimizer, step_size=5000, gamma=0.9)
 loss_his = []
 for t in range(STEPS):
   y_der0 = model(input_pos)
@@ -134,7 +133,6 @@ for t in range(STEPS):
   optimizer.zero_grad()
   loss.backward()
   optimizer.step()
-  scheduler.step()
 
 nn_value = y_der0.cpu().detach().numpy()
 psi_matrix = np.zeros((DIM,DIM))
