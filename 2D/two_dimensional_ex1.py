@@ -1,13 +1,13 @@
 import torch
-Scale = 6.0
-DIM = 600 # the grid
+Scale = 12.0
+DIM = 500 # the grid
 unit_area = (2*Scale)**2/((DIM-1)**2)
 import torch.nn as nn
 
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--level', default=1, type=int, help='Energy Level')
-parser.add_argument('--decay', default=100, type=float, help='Orth Pene')
+parser.add_argument('--decay', default=30, type=float, help='Orth Pene')
 opt = parser.parse_args()
 
 STEPS = 100000
@@ -100,7 +100,7 @@ def init_weights(m):
         m.bias.data.fill_(0.01)
 
 model.apply(init_weights)
-optimizer = torch.optim.Adagrad(model.parameters(), lr=1e-2)
+optimizer = torch.optim.Adam(model.parameters(), lr=5e-3)
 loss_his = []
 for t in range(STEPS):
   y_der0 = model(input_pos)
@@ -136,26 +136,12 @@ for i in range(DIM):
 
 import matplotlib
 matplotlib.use('Agg') # for saving the figure
-import matplotlib.pyplot as plt
-from matplotlib import cm
-
-#plt.figure()
+from matplotlib import pyplot as plt
+plt.figure()
 x = np.outer(np.linspace(-1*Scale, Scale, DIM), np.ones(DIM))
 y = x.copy().T # transpose
-#plt = plt.axes(projection='3d')
-#plt.plot_surface(x,y, psi_matrix,cmap='viridis', edgecolor='none')
-origin = 'lower'
-fig = plt.figure()
-ax = fig.add_subplot(111)
-
-im0 = ax.contourf(x, y, psi_matrix,levels= list(np.arange(-0.6,0.66,0.06)),cmap='viridis', origin=origin)
-fig.colorbar(im0, ax=ax)
-ax.set_aspect('1.0')
-#plt.set_title('Energy:%.5f'%energy.cpu().detach().numpy()) # plt.set_title is used for 3D while plt.title is for 2D
-plt.title('Energy:%.5f'%energy.cpu().detach().numpy())
-#plt.set_ylim(-1*Scale, Scale)
-#plt.set_xlim(-1*Scale,Scale)
-#plt.set_zlim(-1.5, 0.6)
-#plt.figure.savefig('Excited_State_1.png') # for 3D
-plt.savefig('Excited_State_1.png') # for 2D
+plt = plt.axes(projection='3d')
+plt.plot_surface(x,y, psi_matrix,cmap='viridis', edgecolor='none')
+plt.set_title('Energy:%.5f'%energy.cpu().detach().numpy())
+plt.figure.savefig('Excited_State_1.png')
 np.savetxt('Excited_State_1.txt',nn_value)

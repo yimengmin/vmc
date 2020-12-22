@@ -1,9 +1,9 @@
 import torch
-Scale = 6.0
-DIM = 600 # the grid
+Scale = 12.0
+DIM = 500 # the grid
 unit_area = (2*Scale)**2/((DIM-1)**2)
 import torch.nn as nn
-STEPS = 50000
+STEPS = 100000
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 interv = 500 # plot the ebery every 50 steps
 import numpy as np 
@@ -87,7 +87,7 @@ def init_weights(m):
         m.bias.data.fill_(0.01)
 
 model.apply(init_weights)
-optimizer = torch.optim.Adagrad(model.parameters(), lr=1e-2)
+optimizer = torch.optim.Adam(model.parameters(), lr=5e-3)
 loss_his = []
 for t in range(STEPS):
   y_der0 = model(input_pos)
@@ -123,8 +123,9 @@ from matplotlib import pyplot as plt
 plt.figure()
 x = np.outer(np.linspace(-1*Scale, Scale, DIM), np.ones(DIM))
 y = x.copy().T # transpose
-#plt = plt.axes(projection='3d')
-#plt.plot_surface(x,y, psi_matrix,cmap='viridis', edgecolor='none')
-#plt.set_title('Energy:%.5f'%loss.cpu().detach().numpy())
-#plt.figure.savefig('Ground_State.png')
+plt = plt.axes(projection='3d')
+plt.plot_surface(x,y, psi_matrix,cmap='viridis', edgecolor='none')
+plt.set_title('Energy:%.5f'%energy.cpu().detach().numpy())
+plt.figure.savefig('Ground_State.png')
 np.savetxt('Ground_State.txt',nn_value)
+

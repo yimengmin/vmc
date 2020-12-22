@@ -1,4 +1,4 @@
-g = 600;
+g = 500;
 e = ones(g,1);
 L = spdiags([e -2*e e], -1:1, g, g);
 I = speye(g);
