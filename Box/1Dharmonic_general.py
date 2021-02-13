@@ -5,7 +5,7 @@ Scale = 20.0
 N, D_in, H1,H2,H3,H4, D_out = 45360,1,16,8,8,16,1
 STEPS = 100000
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-interv = 500 # plot the energy every 50 steps
+interv = 2000 # plot the energy every 50 steps
 K = 1 # para term,center around x==0.5
 '''
 assume m = hbar = k = 1
@@ -18,7 +18,12 @@ parser.add_argument('--level', default=2, type=int, help='Energy Level')
 parser.add_argument('--depth', default=5, type=int, help='Depth')
 parser.add_argument('--width', default=16, type=int, help='width')
 parser.add_argument('--decay', default=20, type=float, help='Orth Pene')
+parser.add_argument('--seed', default=42, type=int, help='seed')
 opt = parser.parse_args()
+torch.manual_seed(opt.seed)
+torch.cuda.manual_seed(opt.seed)
+np.random.seed(opt.seed)
+torch.backends.cudnn.deterministic = True
 
 #load ground state
 gs0 = np.loadtxt('Ground_State.txt')
@@ -71,7 +76,7 @@ model.apply(init_weights)
 #loss_fn = torch.nn.MSELoss(reduction='sum')
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 loss_his = []
-for t in range(STEPS):
+for t in range(STEPS+1):
 #  psi = qnn(x) #pbc
 #  y_der0 = torch.mul(psi.reshape(-1),model(x).reshape(-1))
   y_der0 = model(x).reshape(-1)
@@ -115,7 +120,7 @@ plt.plot(sampling_value,nn_value, 'r', label='Energy : %.5f'%energy)
 plt.legend(loc='best')
 plt.savefig('Excited_State_%d.png'%(opt.level))
 plt.clf()
-#plt.plot(np.arange(0,int(STEPS/interv),1),loss_his,label='Training Loss')
+#plt.plot(np.arange(0,int(STEPS/interv)+1,1),loss_his,label='Training Loss')
 #plt.legend(loc='best')
 #plt.xlabel('Steps per %d' %interv)
 #plt.ylabel('Energy')
