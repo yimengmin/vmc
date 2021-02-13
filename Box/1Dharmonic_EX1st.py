@@ -15,39 +15,26 @@ qnn = lambda pos:(pos-Scale)*(Scale+pos)
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--level', default=1, type=int, help='Energy Level')
+parser.add_argument('--depth', default=5, type=int, help='Depth')
+parser.add_argument('--width', default=16, type=int, help='width')
 parser.add_argument('--decay', default=30, type=float, help='Orth Pene')
 opt = parser.parse_args()
 
 #load ground state
 gs0 = np.loadtxt('Ground_State.txt')
 gs0 = torch.from_numpy(gs0).float().to(device)
-
-class TwoLayerNet(torch.nn.Module):
-  def __init__(self, D_in, H1,H2,H3,H4, D_out):
-    """
-    In the constructor we instantiate two nn.Linear modules and assign them as
-    member variables.
-    """
-    super(TwoLayerNet, self).__init__()
-    self.linear1 = torch.nn.Linear(D_in, H1)
-    self.linear2 = torch.nn.Linear(H1, H2)
-    self.linear3 = torch.nn.Linear(H2, H3)
-    self.linear4 = torch.nn.Linear(H3, H4)
-    self.linear5 = torch.nn.Linear(H4, D_out)
+class MulLayerNet(torch.nn.Module):
+  def __init__(self, D_in, num_layers, layer_size, D_out):
+    super(MulLayerNet, self).__init__()
+    self.linearstart = torch.nn.Linear(D_in, H1)
+    self.linears = nn.ModuleList([nn.Linear(layer_size,layer_size) for i in range(num_layers)])
+    self.linearend = torch.nn.Linear(H4, D_out)
   def forward(self, x):
-    """
-    In the forward function we accept a Tensor of input data and we must return
-    a Tensor of output data. We can use Modules defined in the constructor as
-    well as arbitrary (differentiable) operations on Tensors.
-    """
-    #h_relu = self.linear1(x).clamp(min=0)
-    h1 = torch.nn.Tanh()(self.linear1(x))
-    h2 = torch.nn.Tanh()(self.linear2(h1))
-    h3 = torch.nn.Tanh()(self.linear3(h2))
-    h4 = torch.nn.Tanh()(self.linear4(h3))
-    y_pred = self.linear5(h4)
+    x = torch.nn.Tanh()(self.linearstart(x))
+    for i, l in enumerate(self.linears):
+      x = torch.nn.Tanh()(l(x))
+    y_pred = self.linearend(x)
     return y_pred
-# N is batch size in our case, N replace the sampling density on 1D condition; D_in is input dimension;
 # H is hidden dimension; D_out is output dimension.
 # Create random Tensors to hold inputs and outputs
 sampling_value = np.linspace(-1*Scale,Scale,N)
@@ -59,7 +46,8 @@ print(x.shape) # x represents the x coordinate
 
 #print(y.shape)
 # Construct our model by instantiating the class defined above.
-model = TwoLayerNet(D_in, H1,H2,H3,H4, D_out)
+model = MulLayerNet(D_in,opt.depth,opt.width, D_out)
+
 model=model.to(device)
 ## ini
 def init_weights(m):
