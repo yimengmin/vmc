@@ -2,12 +2,11 @@ import torch
 print(torch.cuda.is_available())
 import numpy as np
 import torch.nn as nn
-from torch.optim.lr_scheduler import StepLR
 Scale = 20.0
-N,D_in,D_out = 1000000,1,1
-STEPS = 100000
+N, D_in, H1,H2,H3,H4, D_out = 45360,1,16,8,8,16,1
+STEPS = 30000
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-interv = 2000 # plot the energy every 50 steps
+interv = 500 # plot the energy every 50 steps
 K = 1 # para term,center around x==0.5
 '''
 assume m = hbar = k = 1
@@ -19,20 +18,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--level', default=1, type=int, help='Energy Level')
 parser.add_argument('--depth', default=5, type=int, help='Depth')
 parser.add_argument('--width', default=16, type=int, help='width')
-parser.add_argument('--step_size', default=5000, type=int, help='step size for lr decay')
-parser.add_argument('--lr', default=3e-3, type=int, help='lr')
-parser.add_argument('--seed', default=42, type=int, help='seed')
 opt = parser.parse_args()
-torch.manual_seed(opt.seed)
-torch.cuda.manual_seed(opt.seed)
-np.random.seed(opt.seed)
-torch.backends.cudnn.deterministic = True
 class MulLayerNet(torch.nn.Module):
   def __init__(self, D_in, num_layers, layer_size, D_out):
     super(MulLayerNet, self).__init__()
-    self.linearstart = torch.nn.Linear(D_in, layer_size)
+    self.linearstart = torch.nn.Linear(D_in, H1)
     self.linears = nn.ModuleList([nn.Linear(layer_size,layer_size) for i in range(num_layers)])
-    self.linearend = torch.nn.Linear(layer_size, D_out)
+    self.linearend = torch.nn.Linear(H4, D_out)
   def forward(self, x):
     x = torch.nn.Tanh()(self.linearstart(x))
     for i, l in enumerate(self.linears):
@@ -67,10 +59,9 @@ model.apply(init_weights)
 # in the SGD constructor will contain the learnable parameters of the two
 # nn.Linear modules which are members of the model.
 #loss_fn = torch.nn.MSELoss(reduction='sum')
-optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr)
-scheduler = StepLR(optimizer, step_size=opt.step_size, gamma=0.9)
+optimizer = torch.optim.Adam(model.parameters(), lr=5e-3)
 loss_his = []
-for t in range(STEPS+1):
+for t in range(STEPS):
 #  psi = qnn(x) #pbc
 #  y_der0 = torch.mul(psi.reshape(-1),model(x).reshape(-1))
   y_der0 = model(x).reshape(-1)
@@ -94,7 +85,6 @@ for t in range(STEPS+1):
   optimizer.zero_grad()
   loss.backward()
   optimizer.step()
-  scheduler.step()
 nn_value = y_der0.cpu().detach().numpy()
 loss_val = loss.cpu().detach().numpy()
 from matplotlib import pyplot as plt
@@ -104,10 +94,10 @@ plt.plot(sampling_value,nn_value, 'r', label='Energy : %.5f'%loss_val)
 #gt_solution = gt_solution/np.sqrt(sum(gt_solution**2))
 #plt.plot(sampling_value,gt_solution, 'g', label='Ground Truth Solution')
 plt.legend(loc='best')
-plt.savefig('Ground_Stated%dw%d.png'%(opt.depth,opt.width))
+plt.savefig('Ground_State.png')
 plt.clf()
-plt.plot(np.arange(0,int(STEPS/interv)+1,1),loss_his,label='Training Loss')
+plt.plot(np.arange(0,int(STEPS/interv),1),loss_his,label='Training Loss')
 plt.legend(loc='best')
 plt.xlabel('Steps per %d' %interv)
 plt.ylabel('Energy')
-np.savetxt('Ground_Stated%dw%d.txt'%(opt.depth,opt.width),nn_value)
+np.savetxt('Ground_State.txt',nn_value)
