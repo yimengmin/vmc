@@ -1,9 +1,0 @@
-# Run the following 
-python 1Dharmonic.py&&
-python 1Dharmonic_EX1st.py&&
-python 1Dharmonic_general.py --level 2&&
-python 1Dharmonic_general.py --level 3&&
-python 1Dharmonic_general.py --level 4&&
-python 1Dharmonic_general.py --level 5
-...
-... 
