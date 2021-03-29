@@ -118,11 +118,7 @@ for t in range(STEPS+1):
       orth_pen = orth_pen+(torch.abs(torch.matmul(gs_previous,y_der0))*unit_area)**opt.alpha
       if t%1000==0:
         psi = y_der0.detach().cpu().numpy()
-        np.savetxt('Excited_State_%sw%dd%d.txt'%(opt.level,opt.width,opt.depth),psi)
-        print('============>Pfor GS:')
-        print((torch.abs(torch.matmul(torch.t(gs0),y_der0))*unit_area)**opt.alpha)
-        print('============>Penalty for state %d:'%indx)
-        print(torch.abs(torch.matmul(torch.t(gs_previous),y_der0))*unit_area)
+        np.savetxt('Excited_State_%sw%dd%d.txt'%(opt.level,opt.width,opt.depth),psi) # save every 1000 steps
   #========================================
 
   energy = torch.sum(torch.mul(laplacian,y_der0)).float() *unit_area # int->sum
