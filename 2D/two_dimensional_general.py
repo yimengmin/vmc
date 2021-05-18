@@ -1,13 +1,13 @@
 import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
-Scale = 5.0
-DIM = 500 # the grid
-unit_area = (2*Scale)**2/((DIM-1)**2)
 import torch.nn as nn
-
+from scipy import sparse
 import scipy.io as sio
 import numpy as np 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+interv = 500 # plot the ebery every 50 steps
+
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--level', default=2, type=int, help='Energy Level')
@@ -19,6 +19,8 @@ parser.add_argument('--lr', default=5e-3, type=int, help='lr')
 parser.add_argument('--seed', default=42, type=int, help='seed')
 parser.add_argument('--STEPS', default=100000, type=int, help='number of training steps')
 parser.add_argument('--alpha', default=2, type=float, help='L_{\alpha} norm')
+parser.add_argument('--scale', default=5, type=float, help='scale')
+parser.add_argument('--DIM', default=500, type=int, help='dim')
 opt = parser.parse_args()
 torch.manual_seed(opt.seed)
 torch.cuda.manual_seed(opt.seed)
@@ -26,24 +28,29 @@ np.random.seed(opt.seed)
 torch.backends.cudnn.deterministic = True
 STEPS=opt.STEPS
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-interv = 500 # plot the ebery every 50 steps
-mat_contents = sio.loadmat('Energy_operator.mat')
-print(mat_contents)
-H_matrix = mat_contents['H']
-print(H_matrix.shape)
-import numpy as np
-from scipy import sparse
-def sparse_mx_to_torch_sparse_tensor(sparse_mx):
-    """Convert a scipy sparse matrix to a torch sparse tensor."""
-    sparse_mx = sparse_mx.tocoo().astype(np.float32)
-    indices = torch.from_numpy(
-        np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
-    values = torch.from_numpy(sparse_mx.data)
-    shape = torch.Size(sparse_mx.shape)
-    return torch.sparse.FloatTensor(indices, values, shape)
-H_matrix = sparse_mx_to_torch_sparse_tensor(H_matrix)
 
+Scale = opt.scale
+DIM = opt.DIM # the grid
+unit_area = (2*Scale)**2/((DIM-1)**2)
+minenergy = 1e6
+def spy_sparse2torch_sparse(data):
+    """
+    :param data: a scipy sparse csr matrix
+    :return: a sparse torch tensor
+    """
+    samples=data.shape[0]
+    features=data.shape[1]
+    values=data.data
+    coo_data=data.tocoo()
+    indices=torch.LongTensor([coo_data.row,coo_data.col])
+    t=torch.sparse.FloatTensor(indices,torch.from_numpy(values).float(),[samples,features])
+    return t
+diag = np.ones([DIM])
+diags = np.array([-diag, 2.0*diag, -diag])
+kinetic_1d = sparse.spdiags(diags, np.array([1.0, 0.0, -1.0]), DIM, DIM)
+T = sparse.kronsum(kinetic_1d, kinetic_1d)
+H_matrix = spy_sparse2torch_sparse(T)
+H_matrix = 0.5*H_matrix
 
 
 #load ground state
@@ -111,19 +118,20 @@ for t in range(STEPS+1):
 
   #===================compute penality term of based on previous states============
   # 5 is just a constant to penlize gs more
-  orth_pen = 10*(torch.abs(torch.matmul(gs0,y_der0))*unit_area)**opt.alpha
+  orth_pen = (torch.abs(torch.matmul(gs0,y_der0))*unit_area)**opt.alpha
   #  * (2*Scale)/N  normalize them here
   for indx in range(1,opt.level):
       gs_previous = globals()['excited_state_'+str(indx)]
       orth_pen = orth_pen+(torch.abs(torch.matmul(gs_previous,y_der0))*unit_area)**opt.alpha
-      if t%1000==0:
-        psi = y_der0.detach().cpu().numpy()
-        np.savetxt('Excited_State_%sw%dd%d.txt'%(opt.level,opt.width,opt.depth),psi) # save every 1000 steps
-  #========================================
 
   energy = torch.sum(torch.mul(laplacian,y_der0)).float() *unit_area # int->sum
   energy = energy + potential_energy 
   loss = opt.decay*(orth_pen) + energy
+  if (energy.item()<minenergy)and(t>2000):
+      print(t,minenergy)
+      minenergy = energy.item()
+      nn_value = y_der0.cpu().detach().numpy()
+      np.savetxt('Excited_State_%sw%dd%d.txt'%(opt.level,opt.width,opt.depth),nn_value)
   if (t%interv==0):
       print(t,energy.item(),loss.item())
       loss_his.append(loss.item())
@@ -132,21 +140,22 @@ for t in range(STEPS+1):
   loss.backward()
   optimizer.step()
   scheduler.step()
+print('Energy value: %.10f'%minenergy)
 
-nn_value = y_der0.cpu().detach().numpy()
-psi_matrix = np.zeros((DIM,DIM))
-for i in range(DIM):
-  for j in range(DIM):
-      psi_matrix[i][j] = nn_value[i*DIM+j]
+#nn_value = y_der0.cpu().detach().numpy()
+#psi_matrix = np.zeros((DIM,DIM))
+#for i in range(DIM):
+#  for j in range(DIM):
+#      psi_matrix[i][j] = nn_value[i*DIM+j]
 
-import matplotlib
-matplotlib.use('Agg') # for saving the figure
-from matplotlib import pyplot as plt
-plt.figure()
-x = np.outer(np.linspace(-1*Scale, Scale, DIM), np.ones(DIM))
-y = x.copy().T # transpose
-plt = plt.axes(projection='3d')
-plt.plot_surface(x,y, psi_matrix,cmap='viridis', edgecolor='none')
-plt.set_title('Energy:%.5f'%energy.cpu().detach().numpy())
-plt.figure.savefig('Excited_State_%sw%dd%d.png'%(opt.level,opt.width,opt.depth)) # for 2D
-np.savetxt('Excited_State_%sw%dd%d.txt'%(opt.level,opt.width,opt.depth),nn_value)
+#import matplotlib
+#matplotlib.use('Agg') # for saving the figure
+#from matplotlib import pyplot as plt
+#plt.figure()
+#x = np.outer(np.linspace(-1*Scale, Scale, DIM), np.ones(DIM))
+#y = x.copy().T # transpose
+#plt = plt.axes(projection='3d')
+#plt.plot_surface(x,y, psi_matrix,cmap='viridis', edgecolor='none')
+#plt.set_title('Energy:%.5f'%energy.cpu().detach().numpy())
+#plt.figure.savefig('Excited_State_%sw%dd%d.png'%(opt.level,opt.width,opt.depth)) # for 2D
+#np.savetxt('Excited_State_%sw%dd%d.txt'%(opt.level,opt.width,opt.depth),nn_value)
